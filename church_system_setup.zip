@@ -1,0 +1,100 @@
+#!/bin/bash
+
+echo "=== Sistema de Gestão de Igrejas - Instalação ==="
+echo "Este script irá instalar e configurar todo o sistema automaticamente."
+
+# Verificar se está rodando como root
+if [ "$EUID" -ne 0 ]; then 
+    echo "Por favor, execute como root (use sudo)"
+    exit
+fi
+
+# Pedir informações necessárias
+echo "Por favor, forneça as seguintes informações:"
+read -p "Nome do domínio principal (ex: integramax.app.br): " DOMAIN_NAME
+read -p "Nome da primeira igreja: " CHURCH_NAME
+read -p "Email do administrador: " ADMIN_EMAIL
+read -s -p "Senha do administrador: " ADMIN_PASSWORD
+echo ""
+
+# Atualizar sistema
+echo "1. Atualizando o sistema..."
+apt-get update
+apt-get upgrade -y
+
+# Instalar dependências
+echo "2. Instalando programas necessários..."
+apt-get install -y python3-pip postgresql nginx docker.io git unzip curl
+
+# Baixar arquivos do sistema
+echo "3. Baixando arquivos do sistema..."
+cd /opt
+wget https://github.com/wbonfim/igreja/church_system_setup.zip
+unzip church_system_setup.zip
+cd church_system_setup
+
+# Configurar banco de dados
+echo "4. Configurando banco de dados..."
+sudo -u postgres psql -c "CREATE DATABASE church_db;"
+sudo -u postgres psql -c "CREATE USER church_user WITH PASSWORD 'church_password';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE church_db TO church_user;"
+
+# Configurar ambiente Python
+echo "5. Configurando ambiente Python..."
+pip3 install -r requirements.txt
+
+# Configurar Node.js
+echo "6. Instalando Node.js..."
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+apt-get install -y nodejs
+
+# Configurar frontend
+echo "7. Configurando interface..."
+cd frontend
+npm install
+npm run build
+cd ..
+
+# Configurar Nginx
+echo "8. Configurando servidor web..."
+cat > /etc/nginx/sites-available/church << EOF
+server {
+    server_name ~^(?<subdomain>.+)\.${DOMAIN_NAME}$;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+    }
+}
+EOF
+
+ln -s /etc/nginx/sites-available/church /etc/nginx/sites-enabled/
+systemctl restart nginx
+
+# Configurar SSL com Certbot
+echo "9. Configurando certificado SSL..."
+apt-get install -y certbot python3-certbot-nginx
+certbot --nginx -d "*.${DOMAIN_NAME}" --email ${ADMIN_EMAIL} --agree-tos --no-eff-email
+
+# Iniciar serviços
+echo "10. Iniciando serviços..."
+python3 manage.py migrate
+python3 manage.py createsuperuser --username admin --email ${ADMIN_EMAIL} --noinput
+echo "from django.contrib.auth import get_user_model; User = get_user_model(); user = User.objects.get(username='admin'); user.set_password('${ADMIN_PASSWORD}'); user.save()" | python3 manage.py shell
+
+# Criar primeira igreja
+echo "11. Configurando primeira igreja..."
+python3 manage.py create_church --name "${CHURCH_NAME}" --subdomain "${CHURCH_NAME,,}"
+
+echo "=== Instalação Concluída! ==="
+echo ""
+echo "Você pode acessar:"
+echo "- Painel Admin: https://admin.${DOMAIN_NAME}"
+echo "- Site da Igreja: https://${CHURCH_NAME,,}.${DOMAIN_NAME}"
+echo ""
+echo "Use as seguintes credenciais para login:"
+echo "Usuário: admin"
+echo "Senha: [a senha que você definiu]"
+echo ""
+echo "IMPORTANTE: Por favor, altere a senha do administrador após o primeiro login!"
