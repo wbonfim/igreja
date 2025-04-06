@@ -2,54 +2,37 @@
 
 set -e
 
-# Função para esperar o PostgreSQL
-wait_for_postgres() {
-    echo "Aguardando PostgreSQL..."
-    while ! nc -z $POSTGRES_HOST $POSTGRES_PORT; do
-        sleep 0.1
-    done
-    echo "PostgreSQL iniciado"
-}
+echo "Waiting for postgres..."
+while ! nc -z $POSTGRES_HOST $POSTGRES_PORT; do
+    sleep 1
+done
+echo "PostgreSQL started"
 
-# Função para esperar o Redis
-wait_for_redis() {
-    echo "Aguardando Redis..."
-    while ! nc -z $REDIS_HOST $REDIS_PORT; do
-        sleep 0.1
-    done
-    echo "Redis iniciado"
-}
+echo "Waiting for redis..."
+while ! nc -z $REDIS_HOST $REDIS_PORT; do
+    sleep 1
+done
+echo "Redis started"
 
-# Criar diretórios necessários
-mkdir -p /app/media/igrejas/logos
-mkdir -p /app/media/igrejas/backgrounds
-mkdir -p /app/media/igrejas/videos
-mkdir -p /app/staticfiles
+echo "Running migrations..."
+python manage.py migrate --noinput
 
-# Definir permissões
-chmod -R 755 /app/media
-chmod -R 755 /app/staticfiles
-
-# Esperar serviços
-wait_for_postgres
-wait_for_redis
-
-# Aplicar migrações
-python manage.py migrate
-
-# Criar dados iniciais
+echo "Creating initial data..."
 python manage.py criar_usuario_padrao
 python manage.py criar_templates_padrao
 python manage.py criar_igreja_padrao
 
-# Coletar arquivos estáticos
+echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Iniciar Gunicorn
+echo "Starting Gunicorn..."
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 4 \
     --worker-class gthread \
     --threads 4 \
     --timeout 300 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level debug \
     --reload

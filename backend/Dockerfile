@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libjpeg-dev \
     zlib1g-dev \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar dependências Python
@@ -26,7 +27,7 @@ RUN pip install --no-cache-dir Pillow gunicorn
 COPY . .
 
 # Converter quebras de linha para Unix e dar permissão ao script
-RUN sed -i 's/\r$//g' /app/scripts/entrypoint.sh && \
+RUN dos2unix /app/scripts/entrypoint.sh && \
     chmod +x /app/scripts/entrypoint.sh
 
 # Criar diretórios necessários
@@ -39,4 +40,4 @@ RUN mkdir -p /app/media/igrejas/logos \
 
 EXPOSE 8000
 
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+CMD ["/bin/sh", "/app/scripts/entrypoint.sh"]
