@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Django
 *.log
@@ -28,76 +29,35 @@ db.sqlite3-journal
 media/
 staticfiles/
 
-# Environments
-.env
-.venv
-env/
+# Virtual Environment
 venv/
 ENV/
-env.bak/
-venv.bak/
+env/
+.env
 
-# VS Code
-.vscode/
-*.code-workspace
-
-# PyCharm
+# IDE
 .idea/
-*.iml
-*.iws
-.idea_modules/
+.vscode/
+*.swp
+*.swo
+.DS_Store
 
 # Docker
 .docker/
 
-# Sistema
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.py[cod]
-*$py.class
-
-# Logs
-logs/
-*.log
-
-# Banco de dados
-*.sqlite3
-*.db
-
-# Arquivos de mídia e estáticos
-media/
-static/
-staticfiles/
-
-# Certificados SSL
-*.pem
-*.key
-*.crt
-*.cer
-*.der
-*.priv
-
-# Arquivos de backup
-*.bak
-*.swp
-*.swo
-*~
-
-# Arquivos de ambiente
-.env
-.env.local
-.env.*.local
-
-# Arquivos de cache
-.cache/
-.pytest_cache/
-.coverage
+# Coverage
 htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
 
-# Arquivos temporários
-*.tmp
-*.temp
-.DS_Store
-Thumbs.db
+# Unit test / coverage reports
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Node
+node_modules/
